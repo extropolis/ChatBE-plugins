@@ -3,9 +3,9 @@ import unicodedata
 from typing import Callable
 from newspaper import Article, Config
 from serpapi import GoogleSearch
-from tools.base import BaseTool
+from ..base import BaseTool
 try:
-    from tools.news_web_search.retrieval import STArticleRetriver
+    from .retrieval import STArticleRetriver
     use_retriver = True
 except:
     use_retriver = False

@@ -1,8 +1,8 @@
-from tools.base import BaseTool
-from tools.local_search import LocalSearchTool
-from tools.news_web_search.news_search import NewsSearchTool
-from tools.news_web_search.web_search import WebSearchTool
-from tools.memory import MemoryTool
+from .base import BaseTool
+from .local_search.local_search import LocalSearchTool
+from .news_web_search.news_search import NewsSearchTool
+from .news_web_search.web_search import WebSearchTool
+from .memory.memory import MemoryTool
 
 __all__ = [
     "BaseTool",
