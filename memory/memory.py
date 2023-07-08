@@ -2,7 +2,7 @@ from typing import Callable
 from collections import defaultdict
 from datetime import date
 from google.cloud.firestore_v1.base_client import BaseClient
-from tools.base import BaseTool
+from ..base import BaseTool
 import openai
 import os, dotenv, json
 import asyncio

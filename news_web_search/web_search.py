@@ -1,7 +1,7 @@
 import os
 from typing import Callable
 from serpapi import GoogleSearch
-from tools.base import BaseTool
+from ..base import BaseTool
 
 def web_search(query, location = None, time_range = 'd', n_results=5):
     """

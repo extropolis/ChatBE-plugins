@@ -9,7 +9,7 @@ from typing import List
 from sentence_transformers import SentenceTransformer, InputExample, losses, util
 # from tart.TART.src.modeling_enc_t5 import EncT5ForSequenceClassification
 # from tart.TART.src.tokenization_enc_t5 import EncT5Tokenizer
-from tools.news_web_search.news_parser import Newspaper3KParser
+from .news_parser import Newspaper3KParser
 PERF_TEST = False
 LOG_DIR = "logs/"
 USE_THD = 0.6
