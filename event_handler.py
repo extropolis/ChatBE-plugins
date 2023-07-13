@@ -40,7 +40,7 @@ def clear_all_event_handlers():
         v.clear()
 
 def test_mutation(*args, **kwargs):
-    use_memory = kwargs.get("use_memory", False)
+    user_tool_settings = kwargs.get("user_tool_settings", {"memory": False})
     user_info = kwargs.get("user_info", {})
     sample_info = {
         "name": "test_name",
@@ -54,14 +54,14 @@ def test_mutation(*args, **kwargs):
         "kids": [],
         "interests": ["a", "b", "c"],
     }
-    if use_memory:
+    if user_tool_settings["memory"]:
         for k, v in sample_info.items():
             user_info[k] = v
 
 if __name__ == "__main__":
     # update
     user_info = {}
-    kwargs = {"use_memory": True, "user_info": user_info}
+    kwargs = {"user_tool_settings": {"memory": True}, "user_info": user_info}
     print(user_info)
     OnStartUp += test_mutation
     OnStartUp(**kwargs)
@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     # do not update
     user_info = {}
-    kwargs = {"use_memory": False, "user_info": user_info}
+    kwargs = {"user_tool_settings": {"memory": False}, "user_info": user_info}
     print(user_info)
     OnStartUp += test_mutation
     OnStartUp(**kwargs)

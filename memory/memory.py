@@ -216,45 +216,45 @@ class MemoryTool(BaseTool):
         super().__init__(None)
 
     def OnStartUp(self, **kwargs):
-        use_memory = kwargs.get("use_memory", False)
+        user_tool_settings = kwargs.get("user_tool_settings", {self.name: False})
         user_id = kwargs.get("user_id")
         user_info = kwargs.get("user_info")
-        if use_memory:
+        if user_tool_settings[self.name]:
             mem = self.get_memory(user_id)
             for k, v in mem.items():
                 user_info[k] = v
     
     def OnStartUpMsgEnd(self, **kwargs):
-        use_memory = kwargs.get("use_memory", False)
+        user_tool_settings = kwargs.get("user_tool_settings", {self.name: False})
         user_id = kwargs.get("user_id")
         user_info = kwargs.get("user_info")
         message = kwargs.get("message")
-        if use_memory:
+        if user_tool_settings[self.name]:
             asyncio.create_task(self.update_user_session(user_id, message))
 
     def OnUserMsgReceived(self, **kwargs):
-        use_memory = kwargs.get("use_memory", False)
+        user_tool_settings = kwargs.get("user_tool_settings", {self.name: False})
         user_id = kwargs.get("user_id")
         user_info = kwargs.get("user_info")
         message = kwargs.get("message")
-        if use_memory:
+        if user_tool_settings[self.name]:
             asyncio.create_task(self.update_user_session(user_id, message))
             mem = self.get_memory(user_id)
             for k, v in mem.items():
                 user_info[k] = v
 
     def OnResponseEnd(self, **kwargs):
-        use_memory = kwargs.get("use_memory", False)
+        user_tool_settings = kwargs.get("user_tool_settings", {self.name: False})
         user_id = kwargs.get("user_id")
         user_info = kwargs.get("user_info")
         message = kwargs.get("message")
-        if use_memory:
+        if user_tool_settings[self.name]:
             asyncio.create_task(self.update_user_session(user_id, message))
 
     def OnUserDisconnected(self, **kwargs):
-        use_memory = kwargs.get("use_memory", False)
+        user_tool_settings = kwargs.get("user_tool_settings", {self.name: False})
         user_id = kwargs.get("user_id")
-        if use_memory:
+        if user_tool_settings[self.name]:
             asyncio.create_task(self.update_memory(user_id, True))
     
     def get_memory(self, user_id):
