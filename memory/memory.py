@@ -1,6 +1,6 @@
 from typing import Callable
 from collections import defaultdict
-from datetime import date
+from datetime import datetime
 from google.cloud.firestore_v1.base_client import BaseClient
 from ..base import BaseTool
 import openai
@@ -146,7 +146,7 @@ class Memory:
             content = response['choices'][0]['message']['content']
             print(content)
             conversation_summary = json.loads(content)
-            conversation_summary["timestamp"] = date.today().isoformat()
+            conversation_summary["timestamp"] = datetime.now().isoformat()
             print(conversation_summary)
             user_facts["last_conversation"] = conversation_summary
             # user_facts["last_conversation"] = date.today().isoformat()
@@ -182,7 +182,7 @@ class Memory:
         assert isinstance(message, dict) and "role" in message and "content" in message, "message must be a dictionary containing role and content fields"
         assert message["role"] in ["user", "assistant"], "message role must be one of user, assistant"
         self.active_user_sessions[user_id].append(message)
-        self.user_short_memory[user_id].append(message)
+        # self.user_short_memory[user_id].append(message)
 
         user_msg_count = sum(1 for d in self.user_short_memory[user_id] if d["role"] == "user")
         if user_msg_count >= self.short_mem_len and self.user_short_memory[user_id][-1]["role"] == "assistant":
@@ -222,7 +222,8 @@ class MemoryTool(BaseTool):
         if user_tool_settings[self.name]:
             mem = self.get_memory(user_id)
             for k, v in mem.items():
-                user_info[k] = v
+                if k not in ["name", "interests"]:
+                    user_info[k] = v
     
     def OnStartUpMsgEnd(self, **kwargs):
         user_tool_settings = kwargs.get("user_tool_settings", {self.name: False})
@@ -239,9 +240,9 @@ class MemoryTool(BaseTool):
         message = kwargs.get("message")
         if user_tool_settings[self.name]:
             asyncio.create_task(self.update_user_session(user_id, message))
-            mem = self.get_memory(user_id)
-            for k, v in mem.items():
-                user_info[k] = v
+            # mem = self.get_memory(user_id)
+            # for k, v in mem.items():
+            #     user_info[k] = v
 
     def OnResponseEnd(self, **kwargs):
         user_tool_settings = kwargs.get("user_tool_settings", {self.name: False})
