@@ -134,7 +134,7 @@ def news_search(query, location = None, time_range = 'd', n_results=5):
 
 class NewsSearchTool(BaseTool):
     name: str = "news_search"
-    description: str = "Search latest news given an explicit query."
+    description: str = "Search latest news given an explicit query. If the query is asking news about you yourself or the user (e.g. What's new with you?, What's new for you?), you don't need to use it."
     user_description: str = "You can enable this to search for latest news."
     def __init__(self, func: Callable=None, **kwargs):
         '''

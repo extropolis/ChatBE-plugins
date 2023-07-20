@@ -63,7 +63,7 @@ def web_search(query, location = None, time_range = 'd', n_results=5):
 
 class WebSearchTool(BaseTool):
     name: str = "web_search"
-    description: str = "tool for general web search"
+    description: str = "Tool for general web search. Only use it if the user asks something new after 2021 (out of your knowledge base). If the user explicit asks about you yourself or the user themself (e.g. Who are you?), you don't need to use it."
     user_description: str = "You can enable this to perform general web search."
     def __init__(self, func: Callable=None, **kwargs):
         '''The web search must be fast, and could be simple general information such as title or snippet'''
