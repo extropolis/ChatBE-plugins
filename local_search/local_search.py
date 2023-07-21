@@ -246,7 +246,8 @@ class LocalSearch:
 
 class LocalSearchTool(BaseTool):
     name: str = "local_search"
-    description: str = "Search local restaurants, places of interests, etc. Also helpful for local weathers."
+    # description: str = "Search local restaurants, places of interests, etc. Also helpful for local weathers. This is not a tool for searching the location of a place. If the user is asking about history or general common knowledge (e.g. general introduction or history or location of a place), even if could be updated after the year 2021, you should not use it."
+    description: str = "Search for local restaurants, places of interest and weather information. Not intended for searching the location of a specific place or for common knowledge questions."
     user_description: str = "You can enable this to search for local restaurants, places of interest etc. GPS must be enabled to use this tool"
     def __init__(self, func: Callable=None, **kwargs) -> None:
         top_n = kwargs.get(f"{self.name}_top_n", 3)
