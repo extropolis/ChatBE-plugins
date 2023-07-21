@@ -135,7 +135,7 @@ def news_search(query, location = None, time_range = 'd', n_results=5):
 class NewsSearchTool(BaseTool):
     name: str = "news_search"
     # description: str = "Search latest news given an explicit query. If the user is asking news about you yourself or the user (e.g. What's new with you?, What's new for you?), you don't need to use it. If the user is asking about history or general common knowledge (e.g. general introduction or history), even if could be updated after the year 2021, you should not use it."
-    description: str = "Search for the latest news given an explicit query. Not intended for questions about the user or you yourself (e.g. What's new with you?, What's new for you?), or for general knowledge questions."
+    description: str = "Search for the latest news given an explicit query. Not intended for questions about the user, the AI assistant or you yourself (e.g. What's new with you?, What's new for you?), or for general knowledge questions."
     user_description: str = "You can enable this to search for latest news."
     def __init__(self, func: Callable=None, **kwargs):
         '''

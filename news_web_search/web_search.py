@@ -64,7 +64,7 @@ def web_search(query, location = None, time_range = 'd', n_results=5):
 class WebSearchTool(BaseTool):
     name: str = "web_search"
     # description: str = "Tool for general web search. Only use it if the user asks something new after the year 2021. If the user explicitly asks about you yourself or the user themself (e.g. Who are you?), history or general common knowledge (e.g. general introduction or history or location of a place), even if could be updated after 2021, you should not use it."
-    description: str = "Perform a general web search for information published after the year 2021. Not intended for questions about the user or you yourself (e.g. Who are you? What's new with you?) or for general knowledge questions."
+    description: str = "Perform a general web search for information published after the year 2021. Not intended for questions about the user, the AI assistant or you yourself (e.g. Who are you? What's new with you?) or for general knowledge questions."
     user_description: str = "You can enable this to perform general web search."
     def __init__(self, func: Callable=None, **kwargs):
         '''The web search must be fast, and could be simple general information such as title or snippet'''
