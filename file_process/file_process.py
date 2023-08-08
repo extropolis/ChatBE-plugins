@@ -1,4 +1,6 @@
 import os, json, string, io
+import requests
+from urllib.parse import urlparse
 import pinecone
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.schema import Document, BaseRetriever
@@ -8,6 +10,11 @@ import PyPDF2
 from typing import Callable, List, Dict
 from fastapi import UploadFile
 from ..base import BaseTool
+
+default_headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.1901.188 Safari/537.36 Edg/115.0.1901.188",
+    "Upgrade-Insecure-Requests": "1",
+}
 
 def process_txt_file(file_contents: bytes, meta_data: dict) -> List[Document]:
     all_text = file_contents.decode("utf-8", errors="ignore")
@@ -53,7 +60,39 @@ class FileProcessTool(BaseTool):
     
     def handle_url(self, user_id, url):
         print(f"user id: {user_id}, url: {url}")
-        return {"user_id": user_id, "url": url, "status": "success"}
+        try:
+            url_header = requests.head(url, headers=default_headers)
+            content_types = url_header.headers["Content-Type"].split(";")
+            content_type = None
+            for t in content_types:
+                if t in ["application/pdf", "application/json"]:
+                    content_type = t
+                    break
+                ts = t.split("/")
+                if ts[0] == "text" :
+                    content_type = "text"
+                    break
+            parsed_url = urlparse(url)
+            path = parsed_url.path
+            base_name = path.split("/")[-1]
+            if content_type == "application/pdf":
+                print("pdf file")
+                file_content = requests.get(url, headers=default_headers).content
+                all_text = process_pdf_file(file_content, {"source": url, "name": base_name})
+            elif content_type == "text" or content_type == "application/json":
+                print("txt file")
+                file_content = requests.get(url, headers=default_headers).content
+                all_text = process_txt_file(file_content, {"source": url, "name": base_name})
+            else:
+                raise Exception("Unsupported file type by url. Make sure the content-type provided is one of application/json, application/pdf, text/*")
+            splitted_doc = self.text_splitter.split_documents(all_text)
+            
+            self.remove_user_files(user_id)
+            self.current_user_files[user_id] = Pinecone.from_documents(splitted_doc, self.embeddings, index_name="filedix")
+            return {"user_id": user_id, "url": url, "status": "success"}
+        except Exception as e:
+            print(e)
+            return {"user_id": user_id, "status": "failed", "detail": str(e)}
     
     async def handle_file_upload(self, user_id, file: UploadFile):
         try:

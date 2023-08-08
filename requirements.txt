@@ -17,3 +17,4 @@ PyPDF2
 python-multipart
 pinecone-client
 langchain
+requests
