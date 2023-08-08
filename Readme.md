@@ -89,6 +89,8 @@ OPENAI_KEY= # used for anything related to open ai API
 SERPAPI_KEY= # used for web/news search
 HOUNDIFY_ID= # used for local search
 GOOGLE_MAP_KEY= # used for local search
+PINECONE_API_KEY= # used for file processing, requires an index of dimension 1536
+PINECONE_API_ENV= # used for file processing
 FB_ADMIN= # base64 encoded firebase admin json file, used for database for memory.
 # additional KEYs used for other tools/plugins
 ```
