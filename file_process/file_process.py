@@ -35,7 +35,7 @@ def process_pdf_file(file_contents: bytes, meta_data: dict) -> List[Document]:
 class FileProcessTool(BaseTool):
     name: str = "file_process"
     description: str = "Tool for process files to improve the discussion"
-    user_description: str = "You can enable this to upload some pdf files for discussion"
+    user_description: str = "You can enable this to upload some files or submit a link for discussion. It is suggested that you remove any uploaded files after you are done, to have a better conversation flow."
     usable_by_bot = False
 
     def __init__(self, func: Callable=None, **kwargs):
@@ -45,8 +45,9 @@ class FileProcessTool(BaseTool):
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=self.word_limit, chunk_overlap=int(self.word_limit / 5))
 
         pinecone.init(api_key=os.environ["PINECONE_API_KEY"], environment=os.environ["PINECONE_API_ENV"])
+        self.pinecone_db = Pinecone(index=pinecone.Index("fileidx"), embedding_function=self.embeddings.embed_query, text_key="text")
 
-        self.current_user_files: Dict[str, Pinecone] = {}
+        self.current_user_files: Dict[str, List[str]] = {} # this dictionary maps user id to a list of document ids recorded in the database
         OnStartUp = kwargs.get("OnStartUp")
         OnStartUpMsgEnd = kwargs.get("OnStartUpMsgEnd")
         OnUserMsgReceived = kwargs.get("OnUserMsgReceived")
@@ -88,7 +89,7 @@ class FileProcessTool(BaseTool):
             splitted_doc = self.text_splitter.split_documents(all_text)
             
             self.remove_user_files(user_id)
-            self.current_user_files[user_id] = Pinecone.from_documents(splitted_doc, self.embeddings, index_name="filedix")
+            self.current_user_files[user_id] = self.pinecone_db.add_documents(splitted_doc, namespace=f"{user_id}-files")
             return {"user_id": user_id, "url": url, "status": "success"}
         except Exception as e:
             print(e)
@@ -111,7 +112,7 @@ class FileProcessTool(BaseTool):
             splitted_doc = self.text_splitter.split_documents(all_text)
             
             self.remove_user_files(user_id)
-            self.current_user_files[user_id] = Pinecone.from_documents(splitted_doc, self.embeddings, index_name="filedix")
+            self.current_user_files[user_id] = self.pinecone_db.add_documents(splitted_doc, namespace=f"{user_id}-files")
             return {"user_id": user_id, "filename": file.filename, "status": "success"}
         except Exception as e:
             print(e)
@@ -124,7 +125,7 @@ class FileProcessTool(BaseTool):
         if (user_assistants is None) or (user_id not in self.current_user_files):
             return
         
-        docs = self.current_user_files[user_id].as_retriever(search_kwargs={"k": 5}).get_relevant_documents(user_msg)
+        docs = self.pinecone_db.as_retriever(search_kwargs={"k": 5, "namespace": f"{user_id}-files"}).get_relevant_documents(user_msg)
         all_text = "\n\n".join([doc.page_content for doc in docs])
         print(len(docs))
         print(all_text)
@@ -137,7 +138,7 @@ class FileProcessTool(BaseTool):
     
     def remove_user_files(self, user_id):
         if user_id in self.current_user_files and self.current_user_files[user_id] is not None:
-            self.current_user_files[user_id].delete(delete_all=True) # TODO: this deletes everything, we need to properly handle it for different users...
+            self.pinecone_db.delete(ids=self.current_user_files[user_id], namespace=f"{user_id}-files") 
 
     def _run(self):
         return None
