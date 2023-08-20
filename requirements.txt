@@ -17,4 +17,5 @@ PyPDF2
 python-multipart
 pinecone-client
 langchain==0.0.268
+tiktoken
 requests
