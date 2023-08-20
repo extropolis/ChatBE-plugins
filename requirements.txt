@@ -16,5 +16,5 @@ pytest
 PyPDF2
 python-multipart
 pinecone-client
-langchain
+langchain==0.0.268
 requests
