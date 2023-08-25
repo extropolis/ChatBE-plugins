@@ -31,7 +31,7 @@ class FileProcessTool(BaseTool):
         # except Exception as e:
         #     print(e)
 
-        self.pinecone_db = Pinecone(index=pinecone.Index(index_name), embedding=self.embeddings.embed_query, text_key="text")
+        self.pinecone_db = Pinecone(index=pinecone.Index(index_name), embedding=self.embeddings, text_key="text")
 
         self.current_user_files: Dict[str, List[str]] = {} # this dictionary maps user id to a list of document ids recorded in the database
         OnStartUp = kwargs.get("OnStartUp")

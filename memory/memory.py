@@ -1,11 +1,26 @@
-from typing import Callable
+import asyncio
+import json
+import os
+import time
+import uuid
 from collections import defaultdict
 from datetime import datetime
-from google.cloud.firestore_v1.base_client import BaseClient
-from ..base import BaseTool
+from typing import Callable
+
+import dotenv
+import numpy as np
 import openai
-import os, dotenv, json
-import asyncio
+import pinecone
+from google.cloud.firestore_v1.base_client import BaseClient
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.embeddings.sentence_transformer import \
+    SentenceTransformerEmbeddings
+from langchain.schema import Document
+from langchain.vectorstores import Pinecone
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.neighbors import NearestNeighbors
+
+from ..base import BaseTool
 
 dotenv.load_dotenv()
 openai.api_key = os.environ["OPENAI_KEY"]
@@ -178,17 +193,27 @@ class Memory:
         else:
             return
 
-    async def update_user_session(self, user_id, message):
+    def update_user_session(self, user_id, message):
+        '''Only insert the message to the memory for simplicity. If we want to do any other processing, use other functions.'''
         assert isinstance(message, dict) and "role" in message and "content" in message, "message must be a dictionary containing role and content fields"
         assert message["role"] in ["user", "assistant"], "message role must be one of user, assistant"
         self.active_user_sessions[user_id].append(message)
         # self.user_short_memory[user_id].append(message)
 
-        user_msg_count = sum(1 for d in self.user_short_memory[user_id] if d["role"] == "user")
-        if user_msg_count >= self.short_mem_len and self.user_short_memory[user_id][-1]["role"] == "assistant":
-            # Hacky way of checking the messages, need a better approach
-            await self.update_memory(user_id)
-            print("memory about user updated")
+        # user_msg_count = sum(1 for d in self.user_short_memory[user_id] if d["role"] == "user")
+        # if user_msg_count >= self.short_mem_len and self.user_short_memory[user_id][-1]["role"] == "assistant":
+        #     # Hacky way of checking the messages, need a better approach
+        #     await self.update_memory(user_id)
+        #     print("memory about user updated")
+    
+    def retrieve_responses_from_similar_queries(self, user_id, user_assistants):
+        '''For now, we simply use a tf-idf vectorizer and knn search'''
+        if user_assistants is None or len(user_assistants) == 0:
+            return
+        user_current_session = self.active_user_sessions[user_id]
+        assert user_current_session[-1]["role"] == "user"
+        user_msgs = {msg["content"] : idx for idx, msg in enumerate(user_current_session) if msg["role"] == "user"}
+
         
 class MemoryTool(BaseTool):
     name: str = "memory"
@@ -231,15 +256,17 @@ class MemoryTool(BaseTool):
         user_info = kwargs.get("user_info")
         message = kwargs.get("message")
         if user_tool_settings[self.name]:
-            asyncio.create_task(self.update_user_session(user_id, message))
+            self.memory.update_user_session(user_id, message)
 
     def OnUserMsgReceived(self, **kwargs):
         user_tool_settings = kwargs.get("user_tool_settings", {self.name: False})
         user_id = kwargs.get("user_id")
         user_info = kwargs.get("user_info")
         message = kwargs.get("message")
+        user_assistants = kwargs.get("user_assistants", [])
         if user_tool_settings[self.name]:
-            asyncio.create_task(self.update_user_session(user_id, message))
+            self.memory.update_user_session(user_id, message)
+            self.memory.retrieve_responses_from_similar_queries(user_id, user_assistants)
             # mem = self.get_memory(user_id)
             # for k, v in mem.items():
             #     user_info[k] = v
@@ -250,7 +277,7 @@ class MemoryTool(BaseTool):
         user_info = kwargs.get("user_info")
         message = kwargs.get("message")
         if user_tool_settings[self.name]:
-            asyncio.create_task(self.update_user_session(user_id, message))
+            self.memory.update_user_session(user_id, message)
 
     def OnUserDisconnected(self, **kwargs):
         user_tool_settings = kwargs.get("user_tool_settings", {self.name: False})
@@ -266,9 +293,6 @@ class MemoryTool(BaseTool):
     
     async def clear_memory(self, user_id):
         self.memory.clear_memory(user_id)
-
-    async def update_user_session(self, user_id, message):
-        await self.memory.update_user_session(user_id, message)
 
     def _run(self, query: str):
         return None
