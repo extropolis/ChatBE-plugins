@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import time
-import uuid
 from collections import defaultdict
 from datetime import datetime
 from typing import Callable
@@ -13,14 +12,12 @@ import openai
 import pinecone
 from google.cloud.firestore_v1.base_client import BaseClient
 from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.embeddings.sentence_transformer import \
-    SentenceTransformerEmbeddings
-from langchain.schema import Document
 from langchain.vectorstores import Pinecone
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import NearestNeighbors
 
 from ..base import BaseTool
+from .CustomSTEmbeddings import CustomSTEmbeddings
 
 dotenv.load_dotenv()
 openai.api_key = os.environ["OPENAI_KEY"]
@@ -67,21 +64,34 @@ class Memory:
 
         self.history_limit = history_limit
 
+        self.embedding_type = embedding_type
+
+        index_name = "fileidx"
+        dimension = 1536
         if embedding_type == "gpt":
             embeddings = OpenAIEmbeddings(openai_api_key=os.environ["OPENAI_KEY"])
-        else:
+            self.similarity_thres = 0.85
+            self.retrieve_function = self.retrieve_interactions_from_similar_queries_vector_store
+            pinecone.init(api_key=os.environ["PINECONE_API_KEY"], environment=os.environ["PINECONE_API_ENV"])
+            self.pinecone_db = Pinecone(index=pinecone.Index(index_name), embedding=embeddings, text_key="text")
+        elif embedding_type == "st":
             try:
                 import torch
                 model_kwargs = {"device": "cuda"} if torch.cuda.is_available() else {"device": "cpu"}
             except:
                 model_kwargs = {"device": "cpu"}
-            embeddings = SentenceTransformerEmbeddings(
+            embeddings = CustomSTEmbeddings(
                 model_name="sentence-transformers/all-mpnet-base-v2", 
-                model_kwargs=model_kwargs)
-
-        pinecone.init(api_key=os.environ["PINECONE_API_KEY"], environment=os.environ["PINECONE_API_ENV"])
-        index_name = "fileidx"
-        dimension = 1536
+                model_kwargs=model_kwargs,
+                embedding_dimension=dimension)
+            self.similarity_thres = 0.75
+            self.retrieve_function = self.retrieve_interactions_from_similar_queries_vector_store
+            pinecone.init(api_key=os.environ["PINECONE_API_KEY"], environment=os.environ["PINECONE_API_ENV"])
+            self.pinecone_db = Pinecone(index=pinecone.Index(index_name), embedding=embeddings, text_key="text")
+        else:
+            self.similarity_thres = 0.9
+            self.retrieve_function = self.retrieve_interactions_from_similar_queries
+            
         # uncomment these for real production, slow check
         # try:
         #     if index_name not in pinecone.list_indexes():
@@ -89,7 +99,6 @@ class Memory:
         #         pinecone.create_index(index_name, dimension)
         # except Exception as e:
         #     print(e)
-        self.pinecone_db = Pinecone(index=pinecone.Index(index_name), embedding=embeddings, text_key="text")
 
     def store_user_facts(self, user_id, facts):
         user_fact_ref = self.memory.document(user_id)
@@ -289,7 +298,7 @@ class Memory:
                 continue
             interaction = user_msgs[neigh[i]]
             print(f"With sentence: {interaction[0]}, distance: {dist[i]}")
-            if 0 <= dist[i] < 0.9:
+            if 0 <= dist[i] < self.similarity_thres:
                 closest_interactions.append(interaction)
             if len(closest_interactions) > self.history_limit:
                 # retrieve at most self.history_limit interactions
@@ -344,7 +353,7 @@ class Memory:
 
         closest_interactions = []
         for (doc, score) in search_results:
-            if score < 0.85:
+            if score < self.similarity_thres:
                 continue
             for ans in doc.metadata["answers"]:
                 if len(closest_interactions) < self.history_limit:
@@ -415,7 +424,7 @@ class MemoryTool(BaseTool):
         user_assistants = kwargs.get("user_assistants", [])
         if user_tool_settings[self.name]:
             self.memory.update_user_session(user_id, message)
-            self.memory.retrieve_interactions_from_similar_queries(user_id, user_assistants)
+            self.memory.retrieve_function(user_id, user_assistants)
             # self.memory.retrieve_interactions_from_similar_queries_vector_store(user_id, user_assistants)
             # mem = self.get_memory(user_id)
             # for k, v in mem.items():
@@ -428,7 +437,8 @@ class MemoryTool(BaseTool):
         message = kwargs.get("message")
         if user_tool_settings[self.name]:
             self.memory.update_user_session(user_id, message)
-            # self.memory.insert_vector_store(user_id)
+            if self.memory.embedding_type in ["gpt", "st"]:
+                self.memory.insert_vector_store(user_id)
 
     def OnUserDisconnected(self, **kwargs):
         user_tool_settings = kwargs.get("user_tool_settings", {self.name: False})
