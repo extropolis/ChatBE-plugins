@@ -4,6 +4,7 @@ from .news_web_search.news_search import NewsSearchTool
 from .news_web_search.web_search import WebSearchTool
 from .memory.memory import MemoryTool
 from .file_process.file_process import FileProcessTool
+from .image_creation.image_creation import ImageCreation
 
 __all__ = [
     "BaseTool",
@@ -12,6 +13,7 @@ __all__ = [
     "WebSearchTool",
     "MemoryTool",
     "FileProcessTool",
+    "ImageCreation",
 ]
 
 name_map = {
@@ -20,4 +22,5 @@ name_map = {
     WebSearchTool.name: "WebSearchTool",
     MemoryTool.name: "MemoryTool",
     FileProcessTool.name: "FileProcessTool",
+    ImageCreation.name: "ImageCreation",
 }
