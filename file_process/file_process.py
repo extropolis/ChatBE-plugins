@@ -16,6 +16,7 @@ class FileProcessTool(BaseTool):
 
     def __init__(self, func: Callable=None, **kwargs):
         self.word_limit = kwargs.get("file_word_limit", 1000)
+        self.top_k = kwargs.get("file_top_k", 2)
         self.embeddings = OpenAIEmbeddings(openai_api_key=os.environ["OPENAI_KEY"])
         os.environ["OPENAI_API_KEY"] = os.environ["OPENAI_KEY"] # for langchain compatibility
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=self.word_limit, chunk_overlap=int(self.word_limit / 5))
@@ -81,7 +82,7 @@ class FileProcessTool(BaseTool):
         if (user_assistants is None) or (user_id not in self.current_user_files):
             return
         
-        docs = self.pinecone_db.as_retriever(search_kwargs={"k": 5, "namespace": f"{user_id}-files"}).get_relevant_documents(user_msg)
+        docs = self.pinecone_db.as_retriever(search_kwargs={"k": self.top_k, "namespace": f"{user_id}-files"}).get_relevant_documents(user_msg)
         all_text = "\n\n".join([doc.page_content for doc in docs])
         print(len(docs))
         print(all_text)
