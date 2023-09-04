@@ -9,9 +9,31 @@ from io import BytesIO
 from typing import Callable
 
 import requests
+import torch
+from diffusers import DiffusionPipeline
 from PIL import Image
 
 from ..base import BaseTool
+
+base = DiffusionPipeline.from_pretrained(
+    "stabilityai/stable-diffusion-xl-base-1.0", 
+    torch_dtype=torch.float16, 
+    variant="fp16", 
+    use_safetensors=True,
+    cache_dir="/workspace/cache/hub/"
+)
+base.to("cuda")
+
+refiner = DiffusionPipeline.from_pretrained(
+    "stabilityai/stable-diffusion-xl-refiner-1.0",
+    text_encoder_2=base.text_encoder_2,
+    vae=base.vae,
+    torch_dtype=torch.float16,
+    use_safetensors=True,
+    variant="fp16",
+    cache_dir="/workspace/cache/hub/"
+)
+refiner.to("cuda")
 
 
 def generate_img(prompt, user_id, negative_prompt="", num_images=1):
@@ -29,7 +51,8 @@ def generate_img(prompt, user_id, negative_prompt="", num_images=1):
         # "lora": {"LowRA": 0.2, "pixelart": 0.2},
     }
     payload_json = json.dumps(payload)
-    headers = {"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjNkMjMzOTQ5In0.eyJzdWIiOiIzMTRhOTBlNC05MDgzLTQwODgtOTc5Yy04NzMyZDA0ZTI0NTYiLCJ0eXBlIjoidXNlckFjY2Vzc1Rva2VuIiwidGVuYW50SWQiOiI3YzFhOWRkNS0wMmIyLTQ4ZmYtOGMzNy1mNDY3Mjc5ZDNiYzciLCJ1c2VySWQiOiJmYmE4YzIyNS1kY2VlLTRmYmItOGQzZC1mYWMxMWUyZGJiNTYiLCJyb2xlcyI6WyJGRVRDSC1ST0xFUy1CWS1BUEkiXSwicGVybWlzc2lvbnMiOlsiRkVUQ0gtUEVSTUlTU0lPTlMtQlktQVBJIl0sImF1ZCI6IjNkMjMzOTQ5LWEyZmItNGFiMC1iN2VjLTQ2ZjYyNTVjNTEwZSIsImlzcyI6Imh0dHBzOi8vaWRlbnRpdHkub2N0b21sLmFpIiwiaWF0IjoxNjg3OTc2MjA2fQ.k9kdyCWTLPR2m8EIMfZXjYImfFKQ48TX0KB7TMiPIa6bD48Prcam48rio6CsAifbs6N3eo-iZubEI0-EYvGMVlzywa1me07MztK2DyOMWnunbtuxj92E6dMxO0RdVqLe6XT-SEF-yrZCnV51QfLIkmFUPPmq5P6X_W8jSoG9eP1lncX98HPE_6aI_5N85x1xGJj9uReVJZq6RTl4L7-UD9zbBzA7hSVJzHFMNxEc4AiknwgX3_xnyRnPlegJVA8rvfQQxBuFuV9_cI1QsgfA6KSZPRQIw5wSP7rGJqXF5MueRzwikfhtk3EC24QPIV3Rm2VolGWDHiSMH_tw4ucZJQ"}
+    bearer_key = os.environ["OCTO_AI_KEY"]
+    headers = {"Content-Type": "application/json", f"Authorization": "Bearer {bearer_key}"}
     response = requests.post(endpoint_url+"/predict",
     headers=headers, data=payload_json)
 
@@ -44,6 +67,30 @@ def generate_img(prompt, user_id, negative_prompt="", num_images=1):
         # Open the image with PIL
         img = Image.open(BytesIO(img_data))
         img.save(f"{user_dir}/{time_stamp}_{i}.png")
+
+def generate_img_local(prompt, user_id, negative_prompt="", num_images=1):
+    image = base(
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        num_inference_steps=30,
+        guidance_scale=7.5,
+        denoising_end=0.8,
+        output_type="latent",
+    ).images
+    image = refiner(
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        num_inference_steps=30,
+        guidance_scale=7.5,
+        denoising_start=0.8,
+        image=image,
+    ).images[0]
+
+    time_stamp = datetime.now().isoformat(timespec="seconds").replace(":", "_")
+    user_dir = f"generated_images/{user_id}/{time_stamp}"
+    os.makedirs(user_dir, exist_ok=True)
+    # image = Image.fromarray(image)
+    image.save(f"{user_dir}/{time_stamp}_0.png")
 
 
 class ImageCreation(BaseTool):
@@ -92,7 +139,7 @@ class ImageCreation(BaseTool):
             prompt += generation_json.pop(k) + ","
         print(f"Prompt: {prompt}")
         await websocket.send_text(f"Generating images. Please wait. You can access your images at: /generated_images/{user_id}/")
-        generate_img(**{"prompt": prompt,
+        generate_img_local(**{"prompt": prompt,
                         "user_id": user_id, 
                         "negative_prompt": "", 
                         "num_images": 1})

@@ -19,3 +19,6 @@ pinecone-client
 langchain==0.0.268
 tiktoken
 requests
+accelerate 
+safetensors 
+diffusers
