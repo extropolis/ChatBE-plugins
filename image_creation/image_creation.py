@@ -122,8 +122,6 @@ class ImageGenerator():
             negative_prompt=negative_prompt,
             num_inference_steps=30,
             guidance_scale=7.5,
-            denoising_end=0.8,
-            output_type="latent",
         ).images[0]
 
         time_stamp = datetime.now().isoformat(timespec="seconds").replace(":", "_")
