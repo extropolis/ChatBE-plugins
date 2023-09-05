@@ -171,6 +171,17 @@ class ImageCreation(BaseTool):
         kwargs["use_local"] = False
         kwargs["use_refiner"] = False
         self.image_generator = ImageGenerator(**kwargs)
+        self.settings_overwrite = {
+            "assistantsName" :"Diffy",
+            "gptMode" : "Smart",
+            "relationship" : "Friend",
+            "aiDescription" : [
+                "You help me come up with words and phrases that best describe a picture I want to draw. These words and phrases are referred to as prompts. The prompts should be concise and accurate and reflect my needs",
+                "You need to converse with me to ask for clarifications and give suggestions",
+                "Reply in the following format: \"\"\"your suggestions, questions~~{\"basic_prompt\": general description, \"positive_prompt\": Must haves, \"negative_prompt\": Must not haves}\"\"\"",
+                "You don't need to generate the image. Only respond to the user and reply a JSON object following the format."],
+            "aiSarcasm": 1.0,
+        }
         OnResponseEnd = kwargs.get("OnResponseEnd")
         OnResponseEnd += self.OnResponseEnd
 
@@ -217,10 +228,22 @@ class ImageCreation(BaseTool):
         asyncio.create_task(self.try_generate_image(**kwargs))
     
     def on_enable(self, *args: Any, **kwargs: Any) -> Any:
-        pass
+        user_id = kwargs.get("user_id")
+        current_user_settings = kwargs.get("current_user_settings")
+        default_user_settings = kwargs.get("default_user_settings")
+        update_user_settings_fn = kwargs.get("update_user_settings_fn")
+        for k, v in self.settings_overwrite.items():
+            current_user_settings[k] = v
+        update_user_settings_fn(user_id, current_user_settings)
     
     def on_disable(self, *args: Any, **kwargs: Any) -> Any:
-        pass
+        user_id = kwargs.get("user_id")
+        current_user_settings = kwargs.get("current_user_settings")
+        default_user_settings = kwargs.get("default_user_settings")
+        update_user_settings_fn = kwargs.get("update_user_settings_fn")
+        for k in self.settings_overwrite:
+            current_user_settings[k] = default_user_settings[k]
+        update_user_settings_fn(user_id, current_user_settings)
 
     def _run(self, *args, **kwargs):
         pass
