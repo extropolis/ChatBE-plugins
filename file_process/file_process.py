@@ -1,12 +1,16 @@
-import os, asyncio
+import asyncio
+import os
+from typing import Any, Callable, Dict, List
+
 import pinecone
+from fastapi import UploadFile
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Pinecone
-from typing import Callable, List, Dict
-from fastapi import UploadFile
+
 from ..base import BaseTool
 from .files import CustomFileProcessor
+
 
 class FileProcessTool(BaseTool):
     name: str = "file_process"
@@ -96,6 +100,12 @@ class FileProcessTool(BaseTool):
     def remove_user_files(self, user_id):
         if user_id in self.current_user_files and self.current_user_files[user_id] is not None:
             self.pinecone_db.delete(ids=self.current_user_files[user_id], namespace=f"{user_id}-files") 
+    
+    def on_enable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
+
+    def on_disable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
 
     def _run(self):
         return None

@@ -42,6 +42,16 @@ class YourTool(BaseTool):
         self.args["properties"]["query"]["description"] = "The string used to search. Make it as concise as possible"
         self.args["required"] = ["query", "req_info"]
         '''
+    
+    def on_enable(self, *args: Any, **kwargs: Any) -> Any:
+        '''
+        Your logic when the tool is enabled by the user.
+        '''
+    
+    def on_disable(self, *args: Any, **kwargs: Any) -> Any:
+        '''
+        Your logic when the tool is disabled by the user.
+        '''
 
     def _run(self, query: str, req_info: dict=None):
         '''

@@ -1,11 +1,15 @@
-from typing import Callable
+import asyncio
+import json
+import os
 from collections import defaultdict
 from datetime import datetime
-from google.cloud.firestore_v1.base_client import BaseClient
-from ..base import BaseTool
+from typing import Any, Callable
+
+import dotenv
 import openai
-import os, dotenv, json
-import asyncio
+from google.cloud.firestore_v1.base_client import BaseClient
+
+from ..base import BaseTool
 
 dotenv.load_dotenv()
 openai.api_key = os.environ["OPENAI_KEY"]
@@ -269,6 +273,12 @@ class MemoryTool(BaseTool):
 
     async def update_user_session(self, user_id, message):
         await self.memory.update_user_session(user_id, message)
+
+    def on_enable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
+
+    def on_disable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
 
     def _run(self, query: str):
         return None

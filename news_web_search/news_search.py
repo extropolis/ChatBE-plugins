@@ -1,9 +1,14 @@
-import re, os, threading
+import os
+import re
+import threading
 import unicodedata
-from typing import Callable
+from typing import Any, Callable
+
 from newspaper import Article, Config
 from serpapi import GoogleSearch
+
 from ..base import BaseTool
+
 try:
     from .retrieval import STArticleRetriver
     use_retriver = True
@@ -161,6 +166,12 @@ class NewsSearchTool(BaseTool):
         except Exception as e:
             print(e)
     
+    def on_enable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
+    
+    def on_disable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
+
     def _run(self, query: str, req_info: dict=None):
         if query == "":
             query = "What's new?"

@@ -47,6 +47,28 @@ class BaseTool(ABC):
         self.args = self.args_schema.schema()
     
     @abstractmethod
+    def on_enable(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """Use the tool.
+
+        Called when the tool is enabled
+        """
+    
+    @abstractmethod
+    def on_disable(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """Use the tool.
+
+        Called when the tool is disabled
+        """
+
+    @abstractmethod
     def _run(
         self,
         *args: Any,
