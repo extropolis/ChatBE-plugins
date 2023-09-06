@@ -52,8 +52,7 @@ class BaseTool(ABC):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        """Use the tool.
-
+        """
         Called when the tool is enabled
         """
     
@@ -63,8 +62,7 @@ class BaseTool(ABC):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        """Use the tool.
-
+        """
         Called when the tool is disabled
         """
 

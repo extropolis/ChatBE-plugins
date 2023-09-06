@@ -7,10 +7,9 @@ import re
 import sys
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Callable
+from typing import Any, Callable, Dict
 
 import requests
-import torch
 from diffusers import DiffusionPipeline
 from PIL import Image
 
@@ -169,19 +168,29 @@ class ImageCreation(BaseTool):
         kwargs["use_local"] = False
         kwargs["use_refiner"] = False
         self.image_generator = ImageGenerator(**kwargs)
-        self.settings_overwrite = {
-            "assistantsName" :"Diffy",
-            "gptMode" : "Smart",
-            "relationship" : "Friend",
-            "aiDescription" : [
-                "You help me come up with words and phrases that best describe a picture I want to draw. These words and phrases are referred to as prompts. The prompts should be concise and accurate and reflect my needs",
-                "You need to converse with me to ask for clarifications and give suggestions",
-                "Reply in the following format: \"\"\"your suggestions, questions~~{\"basic_prompt\": general description, \"positive_prompt\": Must haves, \"negative_prompt\": Must not haves}\"\"\"",
-                "You don't need to generate the image. Only respond to the user and reply a JSON object following the format."],
-            "aiSarcasm": 1.0,
+        self.settings_overwrite: Dict[str, Dict[str, str]] = {
+            "Smart": {
+                "assistantsName" :"Diffy",
+                "gptMode": "Smart",
+                "aiDescription" : [
+                    "You help me come up with words and phrases that best describe a picture I want to draw. These words and phrases are referred to as prompts. The prompts should be concise and accurate and reflect my needs",
+                    "You need to converse with me to ask for clarifications and give suggestions",
+                    "Reply in the following format: \"\"\"your suggestions, questions~~{\"basic_prompt\": general description, \"positive_prompt\": Must haves, \"negative_prompt\": Must not haves}\"\"\"",
+                    "You don't need to generate the image. Only respond to the user and reply a JSON object following the format."],
+                "aiSarcasm": 1.0,
+            },
+            "GPT3.5-image": {
+                "assistantsName" :"Diffy",
+                "gptMode": "GPT3.5-image",
+                "aiDescription" : [
+                    "You are a funny and sarcastic AI that can generate images via a Stable Diffusion prompt. Try to get an idea of what the user wants to create then come up with the prompt. Greet them by asking what they want to create.\n\nBasic information required to make Stable Diffusion prompt. Once you understand what the user wants generate 3 different prompts with format PROMPT 1: \"the first prompt\", PROMPT 2: \"second prompt\", PROMPT 3: \"third prompt\"\n"],
+                "aiSarcasm": 1.0,
+            }
         }
         OnResponseEnd = kwargs.get("OnResponseEnd")
+        OnModelChanged = kwargs.get("OnModelChanged")
         OnResponseEnd += self.OnResponseEnd
+        OnModelChanged += self.OnModelChanged
 
         super().__init__(None)
 
@@ -194,27 +203,38 @@ class ImageCreation(BaseTool):
         json_dict = json.loads(json_str)
         return json_dict
     
+    def extract_prompt(self, msg) -> dict:
+        # Find all the prompts in the msg
+        prompts = re.findall(r'PROMPT \d+: "(.+)"', msg)
+
+        # For now, we just give the first prompt, we can do more later...
+        json_dict = {"prompt": prompts[0], "negative_prompt": ""}
+        return json_dict
+    
     async def try_generate_image(self, **kwargs):
         user_id = kwargs.get("user_id")
         message = kwargs.get("message")
         websocket = kwargs.get("websocket")
         assert message["role"] == "assistant"
         msg = message["content"]
-        try:
-            generation_json = self.extract_json(msg)
-        except Exception as e:
-            print(f"Failed to extract json from message {msg}.\nError: {e}")
+        generated_json = None
+        for extract_fn in [self.extract_json, self.extract_prompt]:
+            try:
+                generated_json = extract_fn(msg)
+            except Exception as e:
+                print(f"Failed to extract json from {msg} using {extract_fn.__name__}.\nError: {e}")
+        if generated_json is None:
             return
-        print(generation_json)
+        print(generated_json)
         prompt = ""
         for k in ["prompt", "basic_prompt", "positive_prompt"]:
-            if k not in generation_json:
+            if k not in generated_json:
                 continue
-            prompt += generation_json.pop(k) + ","
-        negative = generation_json.pop("negative_prompt")
-        keys_left = list(generation_json.keys())
+            prompt += generated_json.pop(k) + ","
+        negative = generated_json.pop("negative_prompt")
+        keys_left = list(generated_json.keys())
         for k in keys_left:
-            prompt += generation_json.pop(k) + ","
+            prompt += generated_json.pop(k) + ","
         print(f"Prompt: {prompt}")
         await websocket.send_text(f"Generating images. Please wait. You can access your images at: /generated_images/{user_id}/")
         self.image_generator.generate(**{"prompt": prompt,
@@ -224,13 +244,30 @@ class ImageCreation(BaseTool):
     
     def OnResponseEnd(self, **kwargs):
         asyncio.create_task(self.try_generate_image(**kwargs))
+
+    def OnModelChanged(self, **kwargs):
+        user_id = kwargs.get("user_id")
+        current_user_settings = kwargs.get("current_user_settings")
+        update_user_settings_fn = kwargs.get("update_user_settings_fn")
+        new_gpt_model = current_user_settings["gptMode"]
+
+        if new_gpt_model not in self.settings_overwrite.keys():
+            new_gpt_model = "Smart"
+
+        for k, v in self.settings_overwrite[new_gpt_model].items():
+            current_user_settings[k] = v
+        update_user_settings_fn(user_id, current_user_settings)
     
     def on_enable(self, *args: Any, **kwargs: Any) -> Any:
         user_id = kwargs.get("user_id")
         current_user_settings = kwargs.get("current_user_settings")
         default_user_settings = kwargs.get("default_user_settings")
         update_user_settings_fn = kwargs.get("update_user_settings_fn")
-        for k, v in self.settings_overwrite.items():
+        new_gpt_model = current_user_settings["gptMode"]
+        if new_gpt_model not in self.settings_overwrite.keys():
+            new_gpt_model = "Smart"
+        
+        for k, v in self.settings_overwrite[new_gpt_model].items():
             current_user_settings[k] = v
         update_user_settings_fn(user_id, current_user_settings)
     
@@ -239,7 +276,9 @@ class ImageCreation(BaseTool):
         current_user_settings = kwargs.get("current_user_settings")
         default_user_settings = kwargs.get("default_user_settings")
         update_user_settings_fn = kwargs.get("update_user_settings_fn")
-        for k in self.settings_overwrite:
+        for k in self.settings_overwrite["Smart"]:
+            if k == "gptMode":
+                continue
             current_user_settings[k] = default_user_settings[k]
         update_user_settings_fn(user_id, current_user_settings)
 
