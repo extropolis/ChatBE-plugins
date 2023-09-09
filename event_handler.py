@@ -26,6 +26,7 @@ OnStartUpMsgEnd = EventHandler() # triggered when the user received the startup 
 OnUserMsgReceived = EventHandler() # triggered when the app receives a message from the user websocket.
 OnResponseEnd = EventHandler() # triggered when the bot finishes the response to the user.
 OnUserDisconnected = EventHandler() # triggered when the user disconnects.
+OnModelChanged = EventHandler() # triggered when the user changes the GPT model setting
 
 ALL_HANLDERS = {
     "OnStartUp": OnStartUp,
@@ -33,6 +34,7 @@ ALL_HANLDERS = {
     "OnUserMsgReceived": OnUserMsgReceived,
     "OnResponseEnd": OnResponseEnd,
     "OnUserDisconnected": OnUserDisconnected,
+    "OnModelChanged": OnModelChanged,
 }
 
 def clear_all_event_handlers():

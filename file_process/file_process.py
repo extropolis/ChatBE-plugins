@@ -1,12 +1,16 @@
-import os, asyncio
+import asyncio
+import os
+from typing import Any, Callable, Dict, List
+
 import pinecone
+from fastapi import UploadFile
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Pinecone
-from typing import Callable, List, Dict
-from fastapi import UploadFile
+
 from ..base import BaseTool
 from .files import CustomFileProcessor
+
 
 class FileProcessTool(BaseTool):
     name: str = "file_process"
@@ -32,7 +36,7 @@ class FileProcessTool(BaseTool):
         # except Exception as e:
         #     print(e)
 
-        self.pinecone_db = Pinecone(index=pinecone.Index(index_name), embedding=self.embeddings.embed_query, text_key="text")
+        self.pinecone_db = Pinecone(index=pinecone.Index(index_name), embedding=self.embeddings, text_key="text")
 
         self.current_user_files: Dict[str, List[str]] = {} # this dictionary maps user id to a list of document ids recorded in the database
         OnStartUp = kwargs.get("OnStartUp")
@@ -96,6 +100,12 @@ class FileProcessTool(BaseTool):
     def remove_user_files(self, user_id):
         if user_id in self.current_user_files and self.current_user_files[user_id] is not None:
             self.pinecone_db.delete(ids=self.current_user_files[user_id], namespace=f"{user_id}-files") 
+    
+    def on_enable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
+
+    def on_disable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
 
     def _run(self):
         return None

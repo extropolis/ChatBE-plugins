@@ -1,7 +1,11 @@
-from typing import Callable
+import json
+import os
+import string
+from typing import Any, Callable
+
 import houndify
 import requests
-import os, json, string
+
 from ..base import BaseTool
 
 DEFAULT_REQ_INFO = {
@@ -256,6 +260,12 @@ class LocalSearchTool(BaseTool):
         self.args["properties"]["req_info"]["description"] = "User's current location. If you don't know user's location, you should still include empty dict {} as req_info in the arguments"
         self.args["properties"]["query"]["description"] = "The string used to search. Make it as concise as possible"
         self.args["required"] = ["query", "req_info"]
+    
+    def on_enable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
+
+    def on_disable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
 
     def _run(self, query: str, req_info: dict=None):
         return self.ls.search(query, req_info)

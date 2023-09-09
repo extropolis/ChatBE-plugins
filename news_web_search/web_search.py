@@ -1,7 +1,10 @@
 import os
-from typing import Callable
+from typing import Any, Callable
+
 from serpapi import GoogleSearch
+
 from ..base import BaseTool
+
 
 def web_search(query, location = None, time_range = 'd', n_results=5):
     """
@@ -74,6 +77,12 @@ class WebSearchTool(BaseTool):
         self.args["properties"]["query"]["description"] = "The string used to search. Make it as concise as possible."
         self.args["required"] = ["query"]
     
+    def on_enable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
+
+    def on_disable(self, *args: Any, **kwargs: Any) -> Any:
+        pass
+
     def _run(self, query: str, req_info: dict=None):
         search_results = web_search(query, self.n_results)
         if len(search_results) == 0:
