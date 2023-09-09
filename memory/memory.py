@@ -383,6 +383,8 @@ class MemoryTool(BaseTool):
         self.memory = Memory(db=db, short_memory_length=short_memory_length, model=memory_model,
                              embedding_type=memory_embedding_type,
                              history_limit=memory_history_limit)
+        
+        self.repetitive_check = kwargs.get("memory_repetitive_check", False)
         # All the handlers must have been correctly setup, otherwise Memory is no use, 
         # so if there is any error, we must raise
         OnStartUp = kwargs.get("OnStartUp")
@@ -424,7 +426,8 @@ class MemoryTool(BaseTool):
         user_assistants = kwargs.get("user_assistants", [])
         if user_tool_settings[self.name]:
             self.memory.update_user_session(user_id, message)
-            self.memory.retrieve_function(user_id, user_assistants)
+            if self.repetitive_check:
+                self.memory.retrieve_function(user_id, user_assistants)
             # self.memory.retrieve_interactions_from_similar_queries_vector_store(user_id, user_assistants)
             # mem = self.get_memory(user_id)
             # for k, v in mem.items():
@@ -437,7 +440,7 @@ class MemoryTool(BaseTool):
         message = kwargs.get("message")
         if user_tool_settings[self.name]:
             self.memory.update_user_session(user_id, message)
-            if self.memory.embedding_type in ["gpt", "st"]:
+            if self.repetitive_check and self.memory.embedding_type in ["gpt", "st"]:
                 self.memory.insert_vector_store(user_id)
 
     def OnUserDisconnected(self, **kwargs):
