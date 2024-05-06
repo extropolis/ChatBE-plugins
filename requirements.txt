@@ -15,10 +15,11 @@ houndify
 pytest
 PyPDF2
 python-multipart
-pinecone-client
+pinecone-client==2.2.1
 langchain==0.0.268
 tiktoken
 requests
 accelerate 
 safetensors 
 diffusers
+lxml[html_clean]
